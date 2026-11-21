@@ -61,3 +61,9 @@ def test_date_folders(tmp_path):
     organizer.apply(organizer.plan())
 
     assert (tmp_path / "Images" / "2024" / "03" / "a.jpg").exists()
+
+
+def test_hidden_files_are_skipped(tmp_path):
+    make_files(tmp_path, ".file-watchdog-journal.json", ".hidden.png", "a.png")
+    moves = Organizer(tmp_path).plan()
+    assert [m.source.name for m in moves] == ["a.png"]

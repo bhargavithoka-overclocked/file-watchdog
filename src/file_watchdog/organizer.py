@@ -32,7 +32,8 @@ class Organizer:
         self.date_folders = date_folders
 
     def should_skip(self, path: Path) -> bool:
-        if not path.is_file():
+        # hidden files include our own journal and things like .DS_Store
+        if not path.is_file() or path.name.startswith("."):
             return True
         return any(fnmatch.fnmatch(path.name, pattern) for pattern in self.ignore)
 
