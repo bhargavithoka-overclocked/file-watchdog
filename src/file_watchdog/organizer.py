@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import fnmatch
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,9 +18,20 @@ class Move:
 class Organizer:
     """Works out where each file in a folder should go, and moves it there."""
 
-    def __init__(self, root: Path | str, rules: list[Rule] | None = None):
+    def __init__(
+        self,
+        root: Path | str,
+        rules: list[Rule] | None = None,
+        ignore: list[str] | None = None,
+    ):
         self.root = Path(root).expanduser().resolve()
         self.rules = rules or default_rules()
+        self.ignore = ignore or []
+
+    def should_skip(self, path: Path) -> bool:
+        if not path.is_file():
+            return True
+        return any(fnmatch.fnmatch(path.name, pattern) for pattern in self.ignore)
 
     def destination_for(self, path: Path) -> Move | None:
         category = find_category(path, self.rules)
@@ -30,7 +42,7 @@ class Organizer:
     def plan(self) -> list[Move]:
         moves = []
         for path in sorted(self.root.iterdir()):
-            if not path.is_file():
+            if self.should_skip(path):
                 continue
             move = self.destination_for(path)
             if move:

@@ -6,6 +6,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from .config import ConfigError, find_config, load_config
 from .organizer import Move, Organizer
 
 app = typer.Typer(
@@ -19,6 +20,24 @@ console = Console()
 @app.callback()
 def main():
     pass
+
+
+ConfigOption = Annotated[
+    Path | None,
+    typer.Option("--config", "-c", exists=True, dir_okay=False, help="Path to a file-watchdog.toml file."),
+]
+
+
+def build_organizer(folder: Path, config_path: Path | None) -> Organizer:
+    config_path = config_path or find_config(folder)
+    try:
+        config = load_config(config_path)
+    except ConfigError as e:
+        console.print(f"[red]Config error:[/] {e}")
+        raise typer.Exit(1)
+    if config_path:
+        console.print(f"[dim]Using config {config_path}[/]")
+    return Organizer(folder, rules=config.rules, ignore=config.ignore)
 
 
 def print_summary(moves: list[Move], title: str):
@@ -35,9 +54,10 @@ def print_summary(moves: list[Move], title: str):
 def sort(
     folder: Annotated[Path, typer.Argument(exists=True, file_okay=False, help="Folder to sort.")],
     dry_run: Annotated[bool, typer.Option("--dry-run", "-n", help="Show what would move without moving anything.")] = False,
+    config: ConfigOption = None,
 ):
     """Sort the files in FOLDER into category folders."""
-    organizer = Organizer(folder)
+    organizer = build_organizer(folder, config)
     moves = organizer.plan()
 
     if not moves:
