@@ -35,3 +35,27 @@ def test_undo_command(tmp_path):
     assert result.exit_code == 0
     assert "Restored 1 file" in result.output
     assert (tmp_path / "a.jpg").exists()
+
+
+def test_dupes_command(tmp_path):
+    (tmp_path / "a.txt").write_text("same")
+    (tmp_path / "b.txt").write_text("same")
+
+    result = runner.invoke(app, ["dupes", str(tmp_path)])
+    assert "2 copies" in result.output
+    assert (tmp_path / "b.txt").exists()
+
+    result = runner.invoke(app, ["dupes", "--move", str(tmp_path)])
+    assert result.exit_code == 0
+    assert len(list((tmp_path / "_duplicates").iterdir())) == 1
+
+    # moving duplicates can be undone like a normal sort
+    runner.invoke(app, ["undo", str(tmp_path)])
+    assert (tmp_path / "a.txt").exists() and (tmp_path / "b.txt").exists()
+    assert not (tmp_path / "_duplicates").exists()
+
+
+def test_no_dupes(tmp_path):
+    (tmp_path / "a.txt").write_text("one")
+    result = runner.invoke(app, ["dupes", str(tmp_path)])
+    assert "No duplicates" in result.output

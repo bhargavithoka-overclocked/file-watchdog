@@ -7,6 +7,7 @@ from rich.console import Console
 from rich.table import Table
 
 from .config import ConfigError, find_config, load_config
+from .dupes import DuplicateFinder, move_extras, wasted_bytes
 from .journal import Journal
 from .organizer import Move, Organizer
 
@@ -84,6 +85,45 @@ def sort(
         console.print(f"{move.source.name} [cyan]-> {move.destination.relative_to(organizer.root)}[/]")
     print_summary(moves, f"Moved {len(moves)} file(s)")
     console.print("[dim]Changed your mind? Run [bold]file-watchdog undo[/bold] on the same folder.[/]")
+
+
+def human_size(num: float) -> str:
+    for unit in ("B", "KB", "MB", "GB"):
+        if num < 1024:
+            return f"{num:.0f} {unit}" if unit == "B" else f"{num:.1f} {unit}"
+        num /= 1024
+    return f"{num:.1f} TB"
+
+
+@app.command()
+def dupes(
+    folder: Annotated[Path, typer.Argument(exists=True, file_okay=False, help="Folder to scan.")],
+    move: Annotated[bool, typer.Option("--move", help="Move the extra copies into a _duplicates folder.")] = False,
+    recursive: Annotated[bool, typer.Option(help="Look inside subfolders too.")] = True,
+):
+    """Find files with identical content in FOLDER."""
+    root = folder.expanduser().resolve()
+    with console.status("Looking for duplicates..."):
+        groups = DuplicateFinder(root, recursive=recursive).find()
+
+    if not groups:
+        console.print("No duplicates found.")
+        return
+
+    for group in groups:
+        size = human_size(group[0].stat().st_size)
+        console.print(f"\n[bold]{len(group)} copies[/] [dim]({size} each)[/]")
+        for path in group:
+            console.print(f"  {path.relative_to(root)}")
+
+    console.print(f"\n{len(groups)} group(s), {human_size(wasted_bytes(groups))} could be freed.")
+
+    if move:
+        moved = move_extras(groups, root)
+        Journal(root).record(moved)
+        console.print(f"Moved {len(moved)} extra copies to [cyan]_duplicates/[/]. Check them, then delete the folder.")
+    else:
+        console.print("[dim]Run again with --move to move the extra copies out of the way.[/]")
 
 
 @app.command()
