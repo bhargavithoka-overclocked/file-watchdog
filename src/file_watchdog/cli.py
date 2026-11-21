@@ -28,7 +28,7 @@ ConfigOption = Annotated[
 ]
 
 
-def build_organizer(folder: Path, config_path: Path | None) -> Organizer:
+def build_organizer(folder: Path, config_path: Path | None, by_date: bool = False) -> Organizer:
     config_path = config_path or find_config(folder)
     try:
         config = load_config(config_path)
@@ -37,7 +37,12 @@ def build_organizer(folder: Path, config_path: Path | None) -> Organizer:
         raise typer.Exit(1)
     if config_path:
         console.print(f"[dim]Using config {config_path}[/]")
-    return Organizer(folder, rules=config.rules, ignore=config.ignore)
+    return Organizer(
+        folder,
+        rules=config.rules,
+        ignore=config.ignore,
+        date_folders=by_date or config.date_folders,
+    )
 
 
 def print_summary(moves: list[Move], title: str):
@@ -54,10 +59,11 @@ def print_summary(moves: list[Move], title: str):
 def sort(
     folder: Annotated[Path, typer.Argument(exists=True, file_okay=False, help="Folder to sort.")],
     dry_run: Annotated[bool, typer.Option("--dry-run", "-n", help="Show what would move without moving anything.")] = False,
+    by_date: Annotated[bool, typer.Option("--by-date", help="Put files in year/month subfolders, e.g. Images/2026/11.")] = False,
     config: ConfigOption = None,
 ):
     """Sort the files in FOLDER into category folders."""
-    organizer = build_organizer(folder, config)
+    organizer = build_organizer(folder, config, by_date)
     moves = organizer.plan()
 
     if not moves:
@@ -66,7 +72,8 @@ def sort(
 
     if dry_run:
         for move in moves:
-            console.print(f"[dim]would move[/] {move.source.name} [cyan]-> {move.category}/[/]")
+            target = move.destination.parent.relative_to(organizer.root)
+            console.print(f"[dim]would move[/] {move.source.name} [cyan]-> {target}/[/]")
         print_summary(moves, "Dry run")
         return
 

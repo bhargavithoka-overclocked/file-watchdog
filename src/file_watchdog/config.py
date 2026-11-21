@@ -20,6 +20,7 @@ class ConfigError(Exception):
 class Config:
     rules: list[Rule] = field(default_factory=default_rules)
     ignore: list[str] = field(default_factory=list)
+    date_folders: bool = False
 
 
 def find_config(folder: Path) -> Path | None:
@@ -60,5 +61,6 @@ def load_config(path: Path | None) -> Config:
     if not isinstance(ignore, list):
         raise ConfigError("ignore should be a list of patterns, e.g. [\"*.tmp\"]")
     config.ignore = [str(pattern) for pattern in ignore]
+    config.date_folders = bool(data.get("date_folders", False))
 
     return config

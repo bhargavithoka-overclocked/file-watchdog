@@ -3,6 +3,7 @@ from __future__ import annotations
 import fnmatch
 import shutil
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 from .rules import Rule, default_rules, find_category
@@ -23,10 +24,12 @@ class Organizer:
         root: Path | str,
         rules: list[Rule] | None = None,
         ignore: list[str] | None = None,
+        date_folders: bool = False,
     ):
         self.root = Path(root).expanduser().resolve()
         self.rules = rules or default_rules()
         self.ignore = ignore or []
+        self.date_folders = date_folders
 
     def should_skip(self, path: Path) -> bool:
         if not path.is_file():
@@ -37,7 +40,11 @@ class Organizer:
         category = find_category(path, self.rules)
         if category is None:
             return None
-        return Move(path, self.root / category / path.name, category)
+        folder = self.root / category
+        if self.date_folders:
+            modified = datetime.fromtimestamp(path.stat().st_mtime)
+            folder = folder / f"{modified:%Y}" / f"{modified:%m}"
+        return Move(path, folder / path.name, category)
 
     def plan(self) -> list[Move]:
         moves = []

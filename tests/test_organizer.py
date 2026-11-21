@@ -1,3 +1,5 @@
+import os
+
 from file_watchdog.organizer import Organizer, unique_path
 
 
@@ -47,3 +49,15 @@ def test_unique_path_keeps_counting(tmp_path):
     make_files(tmp_path, "a.txt", "a (1).txt")
     assert unique_path(tmp_path / "a.txt").name == "a (2).txt"
     assert unique_path(tmp_path / "b.txt").name == "b.txt"
+
+
+def test_date_folders(tmp_path):
+    photo = tmp_path / "a.jpg"
+    photo.write_text("x")
+    # 15 March 2024, around noon
+    os.utime(photo, (1710504000, 1710504000))
+
+    organizer = Organizer(tmp_path, date_folders=True)
+    organizer.apply(organizer.plan())
+
+    assert (tmp_path / "Images" / "2024" / "03" / "a.jpg").exists()
