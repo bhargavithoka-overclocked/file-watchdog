@@ -1,0 +1,18 @@
+# Copy this into the folder you want to sort, or to
+# ~/.config/file-watchdog/config.toml to use it everywhere.
+
+# Put files into year/month folders, e.g. Images/2026/11
+date_folders = false
+
+# Files matching these patterns are never moved
+ignore = ["*.torrent", "keep-*"]
+
+# Set to true to only use the categories below
+replace_defaults = false
+
+# Your own categories. These are checked before the built-in ones,
+# so here PDFs go to "Papers" instead of "Documents".
+[categories]
+Papers = [".pdf"]
+Books = [".epub", ".mobi"]
+Design = [".fig", ".sketch", ".psd", ".ai"]
