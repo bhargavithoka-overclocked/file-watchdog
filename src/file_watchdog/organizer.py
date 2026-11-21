@@ -38,7 +38,22 @@ class Organizer:
         return moves
 
     def apply(self, moves: list[Move]) -> list[Move]:
+        done = []
         for move in moves:
             move.destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(move.source), str(move.destination))
-        return moves
+            target = unique_path(move.destination)
+            shutil.move(str(move.source), str(target))
+            done.append(Move(move.source, target, move.category))
+        return done
+
+
+def unique_path(path: Path) -> Path:
+    """Return path if it's free, otherwise 'name (1).ext', 'name (2).ext', ..."""
+    if not path.exists():
+        return path
+    counter = 1
+    while True:
+        candidate = path.with_name(f"{path.stem} ({counter}){path.suffix}")
+        if not candidate.exists():
+            return candidate
+        counter += 1
