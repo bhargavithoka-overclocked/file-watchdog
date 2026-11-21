@@ -10,6 +10,7 @@ from .config import ConfigError, find_config, load_config
 from .dupes import DuplicateFinder, move_extras, wasted_bytes
 from .journal import Journal
 from .organizer import Move, Organizer
+from .watcher import watch as watch_folder
 
 app = typer.Typer(
     help="Keep your folders tidy by sorting files into folders by type.",
@@ -85,6 +86,25 @@ def sort(
         console.print(f"{move.source.name} [cyan]-> {move.destination.relative_to(organizer.root)}[/]")
     print_summary(moves, f"Moved {len(moves)} file(s)")
     console.print("[dim]Changed your mind? Run [bold]file-watchdog undo[/bold] on the same folder.[/]")
+
+
+@app.command()
+def watch(
+    folder: Annotated[Path, typer.Argument(exists=True, file_okay=False, help="Folder to watch, e.g. ~/Downloads.")],
+    by_date: Annotated[bool, typer.Option("--by-date", help="Put files in year/month subfolders.")] = False,
+    config: ConfigOption = None,
+):
+    """Watch FOLDER and sort new files as they arrive. Stop with Ctrl+C."""
+    organizer = build_organizer(folder, config, by_date)
+    journal = Journal(organizer.root)
+
+    def on_move(move: Move):
+        journal.record([move])
+        console.print(f"{move.source.name} [cyan]-> {move.destination.relative_to(organizer.root)}[/]")
+
+    console.print(f"Watching [bold]{organizer.root}[/]. Press Ctrl+C to stop.")
+    watch_folder(organizer, on_move)
+    console.print("Stopped.")
 
 
 def human_size(num: float) -> str:
