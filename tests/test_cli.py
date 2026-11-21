@@ -25,3 +25,13 @@ def test_dry_run_moves_nothing(tmp_path):
 def test_empty_folder(tmp_path):
     result = runner.invoke(app, ["sort", str(tmp_path)])
     assert "Nothing to sort" in result.output
+
+
+def test_undo_command(tmp_path):
+    (tmp_path / "a.jpg").write_text("x")
+    runner.invoke(app, ["sort", str(tmp_path)])
+    result = runner.invoke(app, ["undo", str(tmp_path)])
+
+    assert result.exit_code == 0
+    assert "Restored 1 file" in result.output
+    assert (tmp_path / "a.jpg").exists()

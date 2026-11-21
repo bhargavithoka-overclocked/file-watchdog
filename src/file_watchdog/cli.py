@@ -7,6 +7,7 @@ from rich.console import Console
 from rich.table import Table
 
 from .config import ConfigError, find_config, load_config
+from .journal import Journal
 from .organizer import Move, Organizer
 
 app = typer.Typer(
@@ -78,6 +79,24 @@ def sort(
         return
 
     moves = organizer.apply(moves)
+    Journal(organizer.root).record(moves)
     for move in moves:
         console.print(f"{move.source.name} [cyan]-> {move.destination.relative_to(organizer.root)}[/]")
     print_summary(moves, f"Moved {len(moves)} file(s)")
+    console.print("[dim]Changed your mind? Run [bold]file-watchdog undo[/bold] on the same folder.[/]")
+
+
+@app.command()
+def undo(
+    folder: Annotated[Path, typer.Argument(exists=True, file_okay=False, help="Folder that was sorted.")],
+):
+    """Put back the files moved by the last run in FOLDER."""
+    journal = Journal(folder.expanduser().resolve())
+    result = journal.undo_last()
+    if result is None:
+        console.print("Nothing to undo.")
+        return
+
+    for problem in result.problems:
+        console.print(f"[yellow]warning:[/] {problem}")
+    console.print(f"Restored {result.restored} file(s).")
