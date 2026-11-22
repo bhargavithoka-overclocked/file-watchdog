@@ -6,6 +6,8 @@ It moves files into folders based on their type (Images, Documents, Videos and s
 
 ![tests](https://github.com/bhargavithoka-overclocked/file-watchdog/actions/workflows/tests.yml/badge.svg)
 
+![Sorting a messy Downloads folder and finding duplicates](docs/demo.svg)
+
 ## What it does
 
 - Sorts files into folders by type
